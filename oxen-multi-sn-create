@@ -163,9 +163,11 @@ fi
 oxend_conf=/etc/oxen/node-$PT.conf
 ss_conf=/etc/oxen/storage-$PT.conf
 lokinet_conf=/etc/loki/lokinet-router-$PT.ini
+srouter_conf=/etc/session-router/relay-$PT.ini
 if ! [ -d /etc/loki ]; then mkdir /etc/loki; fi
+if ! [ -d /etc/session-router ]; then mkdir /etc/session-router; fi
 if [ -z "$OVERWRITE" ]; then
-    for x in $oxend_conf $ss_conf $lokinet_conf /var/lib/oxen/node-$PT /var/lib/lokinet/router-$PT /var/lib/oxen/storage-$PT; do
+    for x in $oxend_conf $ss_conf $lokinet_conf $srouter_conf /var/lib/oxen/node-$PT /var/lib/lokinet/router-$PT /var/lib/oxen/storage-$PT /var/lib/session-router/relay-$PT; do
         if [ -e $x ]; then
             echo "$x already exists, refusing to overwrite."
             exit 1
@@ -229,17 +231,29 @@ mkdir -p /var/lib/lokinet/router-$PT
 ln -snf $lokinet_conf /var/lib/lokinet/router-$PT/lokinet.ini
 chown -R _lokinet:_loki /var/lib/lokinet/router-$PT
 
+echo "Creating $srouter_conf"
+f=/etc/session-router/relay-$PT.ini
+/usr/bin/session-router -r -g $f
+
+sed -i -e "s/^#public-ip=.*/public-ip=$ip/; s/#public-port=.*/public-port=119$PT/" $f
+sed -i -e "s@^#data-dir=.*@data-dir=/var/lib/session-router/relay-$PT@" $f
+sed -i -e "s/^#listen=.*/listen=:119$PT/; " $f
+sed -i -e "s@^#rpc=ipc.*@rpc=ipc:///var/lib/oxen/node-$PT/oxend.sock@" $f
+chmod 644 $f
+mkdir -p /var/lib/session-router/relay-$PT
+chown -R _session:_session /var/lib/session-router/relay-$PT
+
 echo -e "\n\n\nDone with configuration setup.  Enabling services..."
-systemctl enable {oxen-node,oxen-storage-server,lokinet-router}@$PT.service
+systemctl enable {oxen-node,oxen-storage-server,lokinet-router,session-router-relay}@$PT.service
 
 echo -e "\n\nServices configured to auto-start.  Press enter to actually start services now,"
 echo -e     "or Ctrl-C if you want to look around first before launching them.  Note that if"
 echo -e     "you hit Ctrl-C here you will have to start them yourself using:\n"
-echo -e     "    systemctl start oxen-node@$PT oxen-storage-server@$PT lokinet-router@$PT\n"
+echo -e     "    systemctl start oxen-node@$PT oxen-storage-server@$PT lokinet-router@$PT session-router-relay@$PT\n"
 read
 
 echo "Starting services..."
 
-systemctl start {oxen-node,oxen-storage-server,lokinet-router}@$PT.service
+systemctl start {oxen-node,oxen-storage-server,lokinet-router,session-router-relay}@$PT.service
 
 echo "All done!\n"

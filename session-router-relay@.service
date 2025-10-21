@@ -1,0 +1,21 @@
+[Unit]
+Description=Session Router (service node relay %i)
+Wants=network-online.target oxen-node@%i.service
+After=network-online.target oxen-node@%i.service
+PartOf=session-router-relays.target
+
+[Service]
+User=_session
+Type=notify
+WatchdogSec=30s
+SyslogIdentifier=session-router-%i
+WorkingDirectory=/var/lib/session-router/relay-%i
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+ExecStart=/usr/bin/session-router -r /etc/session-router/relay-%i.ini
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+

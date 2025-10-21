@@ -4,46 +4,13 @@ set -e
 
 print_help() {
     cat <<HELP
-Usage: oxen-multi-sn-upgrade 'https://l2.provider/url' [backups...]
-Usage: oxen-multi-sn-upgrade l2-oxend IP:PORT/PUBKEY [backups...]
+Usage: session-multi-sn-upgrade
 
-Specify one or more l2-providers to add to oxend configs.
-
-To set up all multi-nodes on this machine to communicate directly with an
-Arbitrum One RPC provider, simply run this command with the primary RPC URL
-optionally followed by any backup providers you want to configure that will be
-used if the backup is inaccessible or starts significantly lagging.  For
-example:
-
-    oxen-multi-sn-upgrade 'https://example.com/arb1rpc' 'https://backup.example.com/arb1'
-
-You can also configure oxend in L2 proxy mode to significantly reduce the L2
-provider RPC usage.  This script can configure nodes to use a preconfigured
-oxend proxy, but does not automatically configure the proxy oxend node itself.
-For more details on setting up a proxy, see online Session node documentation.
-
-The listed providers will be tested to make sure they are reachable and are
-providing services for the correct Arbitrum One network; to skip this check add
-the word "nocheck" before the URLs:
-
-    oxen-multi-sn-upgrade nocheck 'http://example.com/xyzrpc' 'https://backup.example.org'
-
-To configure the nodes on this server to use such a proxy run this command with
-one or more address/pubkeys that have been configured to allow this node to use
-the proxy, such as the following (ignore the \\, the command should be entered
-as one single command):
-
-    oxen-multi-sn-upgrade l2-oxend \\
-        10.11.12.13:5678/1ed91b8657b897dcca052343d19df402bf58a90134132266b1634e0bacdf89d2 \\
-        10.20.30.40:9876/d511bcbbf01f739187df45a59501aafaa02cedda678d05cb9aee27f9b91f0caf
-
-(Note that if the proxy is a very old node (installed before Oxen v8), it may
-have different primary pubkey and Ed25519 pubkeys: in such a case you must use
-Ed25519 pubkey rather than the primary SN pubkey here).
+Updates Session node configurations to add session-router configurations for any existing multi-SNs.
 HELP
 }
 
-if [ "$#" -eq 0 ] || [[ "$1" =~ ^- ]]; then
+if [ "$#" -ne 0 ] || [[ "$1" =~ ^- ]]; then
     print_help
     exit 1
 fi
@@ -54,94 +21,93 @@ if [ "$UID" -ne 0 ]; then
 fi
 
 
-l2_setting=
-bad=
 
-if [ "$1" = "l2-oxend" ]; then
-    shift
-
-    for proxy in "$@"; do
-        if [[ "$proxy" =~ ^([1-9][0-9]*\.){3}[1-9][0-9]*:[1-9][0-9]{0,4}/[a-fA-F0-9]{64}$ ]] || [[ "$proxy" =~ ^ipc://. ]]; then
-            l2_setting="$l2_setting\nl2-oxend=$proxy"
-        else
-            bad=1
-            echo "Invalid l2-oxend proxy address: '$proxy'; expected IP:PORT/PUBKEY"
-        fi
-    done
-else
-    if [ "$1" = "nocheck" ]; then
-        shift
-    else
-        for url in "$@"; do
-            outi=$(mktemp)
-            erri=$(mktemp)
-            echo -en "\nChecking '$url'..."
-            if curl -sSX POST "$url" --connect-timeout 10 -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' -o "$outi" 2>"$erri"; then
-                if grep '"0xa4b1"' "$outi" >/dev/null; then
-                    echo -e " Success!"
-                else
-                    bad=1
-                    echo -e " Did not find expected Arbitrum One network id \"0xa4b1\" in the L2 provider 'eth_chainId' response:\n-----"
-                    cat "$outi"
-                    echo -e "-----\nThis RPC provider may be on the wrong network\n"
-                fi
-            else
-                bad=1
-                echo -e " Request failed:\n-----"
-                cat "$erri"
-                echo -e "-----\n"
-            fi
-        done
-    fi
-
-    for proxy in "$@"; do
-        l2_setting="$l2_setting\nl2-provider=$proxy"
-    done
-fi
-
-if [ "$#" -eq 0 ]; then
-    echo "No L2 providers given, unable to proceed!"
-    bad=1
-fi
-
-if [ -n "$bad" ]; then
-    echo -e "\n\n\e[31;1mCorrect the errors above and then re-run this script\e[0m\n"
-    exit 1
-fi
-
-oxend_upgrade=()
+srouter_upgrade=()
 
 shopt -s nullglob
 
-echo "Finding oxend configs that need L2 configuration:"
+echo "Finding service nodes that need session-router:"
 for x in /etc/oxen/node-[0-9][0-9].conf; do
-    if ! grep -q '^\(l2-oxend\|l2-provider\)' $x; then
-        oxend_upgrade+=("$x")
-        echo "    - $x"
+    nn=${x/*node-/};
+    nn=${nn/.conf/};
+    if ! [ -e /etc/session-router/relay-$nn.ini ]; then
+        srouter_upgrade+=($nn)
+        echo "    - $nn"
     fi
 done
 
-if [ "${#oxend_upgrade[@]}" = "0" ]; then
+if [ "${#srouter_upgrade[@]}" = "0" ]; then
     echo "Nothing to upgrade"
     exit 0
 fi
 
-restarts=()
+starts=()
 
-if [ "${#oxend_upgrade[@]}" -gt 0 ]; then
+if [ "${#srouter_upgrade[@]}" -gt 0 ]; then
+
+    public_ip=""
+
+    for nn in "${srouter_upgrade[@]}"; do
+        old_ini="/etc/loki/lokinet-router-$nn.ini"
+        if [ -f "$old_ini" ]; then
+            p="$(grep '^public-ip=[1-9]' $old_ini)"
+            if [ -n "$p" ]; then
+                public_ip="${p/public-ip=/}"
+                break
+            fi
+        fi
+    done
+
     echo -e "\n"
-    echo "About to add the following L2 configuration to the oxend configs listed above:"
-    echo -e "$l2_setting" | sed -e 's/^/    /'
+    echo "About to set up session-router configs for the multi SNs listed above"
+    echo "Each session-router instance will communication on UDP port 119NN where NN is"
+    echo "the service number two-digit number (e.g. session-router-relay@42 will be"
+    echo "configured to use port 11942)"
     echo ""
+
+    if [ -n "$public_ip" ]; then
+        echo "This script found 'public-ip=$public_ip' in your existing lokinet multi-sn"
+        echo "config and will replicate that in the generate session-router configs in"
+        echo "/etc/session-router/relay-NN.ini"
+        echo ""
+    fi
+
     read -p "Press enter to continue, Ctrl-C to abort."
 
-    for ox in "${oxend_upgrade[@]}"; do
-        echo -e "$l2_setting" >>"$ox"
+    mkdir -p /etc/session-router
+    mkdir -p /var/lib/session-router
+    chown _session:_session /var/lib/session-router
+    for nn in "${srouter_upgrade[@]}"; do
+        mkdir -p /var/lib/session-router/relay-$nn
+        chown _session:_session /var/lib/session-router/relay-$nn
+        f=/etc/session-router/relay-$nn.ini
+        session-router -r -g $f
+        if [ -n "$public_ip" ]; then
+            sed -i -e "s/^#public-ip=.*/public-ip=$public_ip/; s/#public-port=.*/public-port=119$nn/" $f
+        else
+            sed -i -e "s/^#listen=.*/listen=:119$nn/; " $f
+        fi
+        sed -i -e "s@^#data-dir=.*@data-dir=/var/lib/session-router/relay-$nn@" $f
+        sed -i -e "s@^#rpc=ipc.*@rpc=ipc:///var/lib/oxen/node-$nn/oxend.sock@" $f
+
+        chmod 644 $f
+
+        systemctl enable session-router-relay@$nn.service
+        starts+=(session-router-relay@$nn.service)
     done
-    restarts+=(oxen-nodes.target)
 fi
 
 echo -e "\nAll done."
-if [ "${#restarts[*]}" -gt 0 ]; then
-    echo -e "\nYou probably want to run this now to restart services with the update configs:\n\n    systemctl restart ${restarts[*]}\n"
+if [ "${#starts[*]}" -gt 0 ]; then
+    echo -e "\nThe following services have been configured and enabled, and need to be started:\n    ${starts[*]}\n"
+
+    echo "Press enter to start them now, or Ctrl-C if you want to start them yourself later."
+
+    read
+
+    for s in "${starts[@]}"; do
+        echo "Starting $s"
+        systemctl start $s
+        sleep 0.5
+    done
 fi

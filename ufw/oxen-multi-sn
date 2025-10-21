@@ -1,4 +1,4 @@
-[loki-multi-sn]
-title=Loki service node daemons
-description=Loki service node daemons (node, storage, lokinet) when running multiple service nodes
-ports=20200:20299,22100:22299,22500:22599/tcp|10900:10999,20200:20299/udp
+[session-multi-sn]
+title=Session service node daemons
+description=Session service node daemons (node, storage, lokinet, router) when running multiple service nodes
+ports=20200:20299,22100:22299,22500:22599/tcp|10900:10999,11900:11999,20200:20299/udp

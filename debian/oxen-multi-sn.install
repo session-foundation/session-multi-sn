@@ -1,9 +1,11 @@
 oxen-node@.service /lib/systemd/system
-oxen-storage-server@.service /lib/systemd/system
-lokinet-router@.service /lib/systemd/system
 oxen-nodes.target /lib/systemd/system
+oxen-storage-server@.service /lib/systemd/system
 oxen-storage-servers.target /lib/systemd/system
+lokinet-router@.service /lib/systemd/system
 lokinet-routers.target /lib/systemd/system
+session-router-relay@.service /lib/systemd/system
+session-router-relays.target /lib/systemd/system
 ufw/oxen-multi-sn /etc/ufw/applications.d
 oxen-multi-sn-create /usr/bin
 oxen-multi-sn-upgrade /usr/bin

@@ -9,13 +9,14 @@ Homepage: https://github.com/jagerman/loki-multi-sn
 Package: oxen-multi-sn
 Architecture: all
 Multi-Arch: foreign
-Depends: curl, oxend (>= 11.2.0-1~), lokinet-bin (>= 0.9.13-2~), oxen-storage-server (>= 2.10.0-1~), debconf
+Depends: ${misc:Depends}, curl, oxend (>= 11.6.0), lokinet-bin (>= 0.9.14), oxen-storage-server (>= 2.11.1), session-router-bin (>= 1.0.0~)
 Description: Oxen service node multi-SN helper package
  This package contains service templates, targets, and a helper script to set
  up multiple SNs on the same machine.
  .
- This is unsupported and requires a significantly more powerful machine than
- what is required to run a single service node.
+ Note that doing so requires a significantly more powerful machine than
+ what is required to run a single service node.  A dedicated server rather
+ than a VPS is recommended for such a setup.
  .
  For more details on how to use this, see
  https://github.com/jagerman/loki-multi-sn

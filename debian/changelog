@@ -1,3 +1,16 @@
+oxen-multi-sn (0.28) sid; urgency=medium
+
+  * Start session routers one at a time instead of all at once.
+
+ -- Jason Rhinelander <jason@session.foundation>  Wed, 22 Oct 2025 01:38:45 -0300
+
+oxen-multi-sn (0.27) sid; urgency=medium
+
+  * Update dependencies for 11.6.0
+  * Add session-router configuration
+
+ -- Jason Rhinelander <jason@session.foundation>  Tue, 21 Oct 2025 13:35:54 -0300
+
 oxen-multi-sn (0.26) sid; urgency=medium
 
   * Updated dependencies for 11.2.0.
