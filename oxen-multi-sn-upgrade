@@ -81,15 +81,16 @@ if [ "${#srouter_upgrade[@]}" -gt 0 ]; then
         mkdir -p /var/lib/session-router/relay-$nn
         chown _session:_session /var/lib/session-router/relay-$nn
         f=/etc/session-router/relay-$nn.ini
-        session-router -r -g $f
+        listen_args=
         if [ -n "$public_ip" ]; then
-            sed -i -e "s/^#public-ip=.*/public-ip=$public_ip/; s/#public-port=.*/public-port=119$nn/" $f
+            listen_args="--public-ip=$public_ip --public-port=119$nn"
         else
-            sed -i -e "s/^#listen=.*/listen=:119$nn/; " $f
+            listen_args="--listen=:119$nn"
         fi
-        sed -i -e "s@^#data-dir=.*@data-dir=/var/lib/session-router/relay-$nn@" $f
-        sed -i -e "s@^#rpc=ipc.*@rpc=ipc:///var/lib/oxen/node-$nn/oxend.sock@" $f
 
+        /usr/bin/session-router-config --relay --data-dir=/var/lib/session-router/relay-$nn \
+            $listen_args --oxend-rpc=ipc:///var/lib/oxen/node-$nn/oxend.sock \
+            $f
         chmod 644 $f
 
         systemctl enable session-router-relay@$nn.service

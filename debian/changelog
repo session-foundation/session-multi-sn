@@ -1,3 +1,9 @@
+oxen-multi-sn (0.29) sid; urgency=medium
+
+  * Updates for session-router 1.0.2 & storage-server 2.11.2
+
+ -- Jason Rhinelander <jason@session.foundation>  Thu, 11 Dec 2025 17:06:41 -0400
+
 oxen-multi-sn (0.28) sid; urgency=medium
 
   * Start session routers one at a time instead of all at once.
