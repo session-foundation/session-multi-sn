@@ -8,6 +8,7 @@ PartOf=oxen-storage-servers.target
 [Service]
 User=_loki
 Type=notify
+TimeoutStartSec=10min
 WatchdogSec=5min
 WorkingDirectory=/var/lib/oxen
 LimitNOFILE=16384
@@ -17,4 +18,3 @@ ExecStart=/usr/bin/oxen-storage --config-file /etc/oxen/storage-%i.conf
 
 [Install]
 WantedBy=multi-user.target
-
