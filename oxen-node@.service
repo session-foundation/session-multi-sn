@@ -1,5 +1,6 @@
 [Unit]
 Description=Oxen network node (%i)
+Wants=network-online.target
 After=network-online.target
 PartOf=oxen-nodes.target
 
