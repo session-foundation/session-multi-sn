@@ -1,8 +1,7 @@
 [Unit]
 Description=LokiNET: Anonymous Network layer thingydoo, router (%i)
-After=network-online.target
-Wants=loki-node@%i.service
-After=loki-node@%i.service
+Wants=network-online.target oxen-node@%i.service
+After=network-online.target oxen-node@%i.service
 PartOf=lokinet-routers.target
 
 [Service]
