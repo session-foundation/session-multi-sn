@@ -1,3 +1,9 @@
+oxen-multi-sn (0.30) sid; urgency=medium
+
+  * Update dependencies to oxend 11.7.0 + ss 2.12.0 + sr 1.1.0
+
+ -- Jason Rhinelander <jason@session.foundation>  Thu, 15 Oct 2026 21:17:48 -0300
+
 oxen-multi-sn (0.29) sid; urgency=medium
 
   * Updates for session-router 1.0.2 & storage-server 2.11.2
